@@ -1,4 +1,4 @@
-const characters = require('./model')
+let characters = require('./model')
 const{
     GraphQLSchema,
     GraphQLObjectType,
@@ -40,10 +40,29 @@ const Person = new GraphQLObjectType({
                         return axios.get(film).then(res => res.data)
                     })
                 }
+            },
+            homeWorld: {
+                type: HomeWorldType,
+                resolve: (person) =>{
+                    return axios.get(person.homeworld).then(res => res.data)
+                }
             }
         }
     }
 })
+
+const HomeWorldType = new GraphQLObjectType({
+    name:'HomeWorld',
+    fields:() => {
+        return {
+            name: { type: GraphQLString },
+            climate: { type: GraphQLString },
+            population: { type: GraphQLString }
+        }
+    }
+})
+
+
 
 const Query = new GraphQLObjectType({
     name:'Query',
@@ -52,11 +71,43 @@ const Query = new GraphQLObjectType({
            people:{
                type: new GraphQLList(Person),
                resolve: () => characters,
-           }
+           },
+           person:{
+               type: Person,
+               args:{
+                   id:{ type: GraphQLNonNull(GraphQLInt) }
+               },
+               resolve: (parentVal, args) => {
+                   return characters.find(character => character.id === args.id)
+                 console.log('---------------parentVal', parentVal);
+                 console.log('---------------args', args);
+               }          
+            }
         }
     }
 })
 
+const Mutation = new GraphQLObjectType({
+    name:'Mutation',
+    fields: () => {
+        return {
+            deletePerson:{
+                type: Person,
+                args: { id: {type: GraphQLNonNull(GraphQLInt)}},
+                resolve: (parentVal, args) => {
+                    let character = characters.find(e => e.id === args.id)
+                    characters = characters.filter(person => person.id !== args.id)
+                    return{
+                        id: character.id,
+                        name: character.name
+                    }
+                }
+            }
+        }
+    }
+})
 module.exports = new GraphQLSchema ({
-    query: Query
+    query: Query,
+    mutation: Mutation
+
 })
